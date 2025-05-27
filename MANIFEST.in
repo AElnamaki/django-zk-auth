@@ -12,6 +12,5 @@ recursive-include django_zk_auth/static *
 recursive-include django_zk_auth/templates *
 recursive-include django_zk_auth/circuits *
 recursive-include django_zk_auth/keys *
-recursive-include django_zk_auth *.py
 recursive-include django_zk_auth *.json
 global-exclude __pycache__ *.py[cod]
