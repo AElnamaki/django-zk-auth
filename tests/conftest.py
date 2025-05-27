@@ -23,14 +23,3 @@ counts = Counter(settings.INSTALLED_APPS)
 duplicates = [app for app, count in counts.items() if count > 1]
 print("Duplicate apps in INSTALLED_APPS:", duplicates)
 
-# import django
-# from django.conf import settings
-
-# def pytest_configure():
-#     if not settings.configured:
-#         settings.configure(
-#             USE_TZ=True,
-#             TIME_ZONE='UTC',
-#             INSTALLED_APPS=[],
-#         )
-#         django.setup()
