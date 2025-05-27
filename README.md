@@ -1,106 +1,155 @@
-# django-zk-auth
+# Django ZK Auth
 
-🔐 A Django authentication package using zero-knowledge proofs (ZKPs) for enhanced privacy and security.
+**Modern Zero-Knowledge Authentication for Django Projects**
+
+![PyPI version](https://img.shields.io/pypi/v/django-zk-auth)
+![Python versions](https://img.shields.io/pypi/pyversions/django-zk-auth)
+![License](https://img.shields.io/github/license/your-org/django-zk-auth)
+
+## Overview
+
+`django-zk-auth` is a powerful Django package that introduces Zero-Knowledge Proof (ZKP) authentication for privacy-preserving user verification. Built with cutting-edge cryptographic primitives and Circom-based ZK circuits, this package enables users to authenticate without revealing sensitive secrets.
 
 ## Features
 
-- Authenticate users via Zero-Knowledge proofs instead of passwords  
-- Secure and privacy-preserving login flows  
-- Custom authentication backends compatible with Django's auth system  
-- Support for passwordless user registration using cryptographic commitments  
-- Enhanced admin backend with additional security checks  
-- Easy integration and configuration with existing Django projects  
-
----
+* ✠ Zero-Knowledge Authentication with Groth16
+* ⚡ Poseidon Hashing for ZK-friendly commitments
+* 🔒 BN254 field arithmetic and proof verification
+* ✨ Plug-and-play backend for Django's authentication system
+* 🚀 Ready-to-use zk-SNARK circuit integration
+* 🔢 Fully type-annotated and tested Python code
 
 ## Installation
 
 ```bash
 pip install django-zk-auth
 ```
-## Configuration of Authentication Backends
 
-To integrate Zero-Knowledge proof-based authentication into your Django project, configure the custom authentication backends provided by `django-zk-auth`.
+## Quickstart
 
-## Using `ZKUser` and Authentication Backends in Your Django Project
-
-To integrate `django-zk-auth` seamlessly, you can configure your Django settings to use the provided `ZKUser` model and authentication backends directly.
-
-Here is an example configuration snippet, inspired by the `tests/test_settings.py` file included with the package, which you can adapt for your project:
+1. **Add to Installed Apps and Set Auth Backend**
 
 ```python
-# settings.py (or your test settings)
-
+# settings.py
 INSTALLED_APPS = [
-    "django.contrib.contenttypes",
-    "django.contrib.auth",
-    "django.contrib.sessions",
-    "django_zk_auth",  # Enables ZK authentication app
+    ...
+    'django_zk_auth',
 ]
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",  # In-memory DB for testing or quick dev setup
-    }
-}
-
-AUTH_USER_MODEL = "django_zk_auth.ZKUser"  # Use the ZKUser model from the package
 
 AUTHENTICATION_BACKENDS = [
-    "django_zk_auth.auth_backend.ZKAdminAuthenticationBackend",  # Admin login with ZK proof
-    "django_zk_auth.auth_backend.ZKAuthenticationBackend",       # Standard ZK user login
-    "django_zk_auth.auth_backend.ZKPasswordlessBackend",         # Passwordless/registration backend
-    "django.contrib.auth.backends.ModelBackend",                 # Django's fallback backend (optional)
+    'django_zk_auth.auth_backend.ZKProofAuthenticationBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
-# Optional: Speed up tests by simplifying password hashing
-PASSWORD_HASHERS = [
-    "django.contrib.auth.hashers.MD5PasswordHasher",
-]
+AUTH_USER_MODEL = 'django_zk_auth.ZKUser'
+```
 
-# Additional recommended settings
-USE_TZ = True
-TIME_ZONE = "UTC"
+2. **Include Routes**
+
+```python
+# urls.py
+from django.urls import include, path
+
+urlpatterns = [
+    ...
+    path("zk_auth/", include("django_zk_auth.urls")),
+]
+```
+
+3. **Migrate Database**
+
+```bash
+python manage.py migrate
+```
+
+## Authentication Flow
+
+The package uses the following protocol:
+
+1. User generates a zk-SNARK proof of identity knowledge using Circom + `zk_auth.circom`
+2. User sends the proof, public signals, and identity commitment to the server
+3. The backend verifies the proof using the verification key
+4. If valid, the user is authenticated and optionally created if registering
+
+## API Endpoints
+
+### Register: `POST /zk_auth/register/`
+
+```json
+{
+  "username": "zkuser",
+  "proof": { ... },
+  "public_signals": [ ... ],
+  "identity_commitment": "0xabc..."
+}
+```
+
+### Login: `POST /zk_auth/login/`
+
+```json
+{
+  "username": "zkuser",
+  "proof": { ... },
+  "public_signals": [ ... ]
+}
+```
+
+## Circuits
+
+The `zk_circuits/` directory includes Circom artifacts:
 
 ```
-This setup allows your project to authenticate users through Zero-Knowledge proofs instead of conventional password authentication, enabling secure and privacy-preserving login flows and Leverage Django’s built-in authentication fallback if needed.
+zk_circuits/
+├── zk_auth.circom        # Main circuit logic
+├── zk_auth.r1cs          # Constraint system
+├── zk_auth.zkey          # Proving key
+├── zk_auth_vkey.json     # Verification key
+└── zk_auth_js/
+    └── zk_auth.wasm      # WASM for proof generation
+```
 
+To generate circuits:
 
+```bash
+circom zk_auth.circom --r1cs --wasm
+snarkjs groth16 setup zk_auth.r1cs ptau_file.ptau zk_auth.zkey
+snarkjs zkey export verificationkey zk_auth.zkey zk_auth_vkey.json
+```
 
-### Explanation of Authentication Backends:
+## Directory Structure
 
-## Authentication Backends Overview
+```
+django_zk_auth/
+├── admin.py
+├── apps.py
+├── auth_backend.py
+├── crypto/
+│   ├── field_arithmetic.py       # Finite field ops (BN254)
+│   ├── hash_utils.py             # audit hashing
+│   ├── poseidon.py               # Poseidon Hash impl
+│   ├── proof_system.py           # Groth16 proof verify
+│   ├── types.py                  # Custom types
+│   └── zk_system.py              # ZK verification logic
+├── exceptions.py
+├── models.py                    # ZKUser model
+├── urls.py
+├── utils.py                     # IP/rate limit helpers
+└── views.py                     # Auth endpoints
 
-- **ZKAuthenticationBackend**  
-  Implements authentication using Zero-Knowledge proofs submitted by users. It verifies proof validity, account status, and manages failed login attempts, fully integrating with Django's user model through the custom `ZKUser`.
+zk_circuits/
+├── zk_auth.circom
+├── zk_auth.r1cs
+├── zk_auth.zkey
+├── zk_auth_vkey.json
+└── zk_auth_js/zk_auth.wasm
 
-- **ZKPasswordlessBackend**  
-  A fallback backend designed primarily for user registration flows. It authenticates users based on cryptographic commitments and registration proofs without requiring passwords.
-
-- **ZKAdminAuthenticationBackend (Optional)**  
-  Extends `ZKAuthenticationBackend` with additional security layers for Django admin access, ensuring only active staff users with valid ZK proofs can log in.
-
-This modular backend design preserves the zero-knowledge property, enhancing security and privacy beyond traditional password schemes.
-
-## Usage in Your Django Application
-
-1. **User Login Flow:**  
-   Replace traditional password authentication forms with a mechanism that collects Zero-Knowledge proof data (`zk_proof`) and a challenge `nonce`. These values are then passed to Django’s `authenticate()` method, which invokes the custom backends.
-
-2. **Django Authentication Integration:**  
-   Your views, middleware, or REST framework authentication classes can call:
-
-   ```python
-   from django.contrib.auth import authenticate, login
-
-   user = authenticate(request, username=username, zk_proof=zk_proof_data, nonce=nonce)
-   if user is not None:
-       login(request, user)
-       # User is now authenticated via Zero-Knowledge proof
-   else:
-       # Handle authentication failure
-
+tests/
+├── test_poseidon.py
+├── test_field_arithmetic.py
+├── test_hash_utils.py
+├── test_proof_system.py
+└── ...
+```
 ## Running Tests
 
 The package includes an example `tests/test_settings.py` which configures an in-memory database and minimal apps for testing the authentication backend in isolation.
@@ -112,4 +161,24 @@ pytest -s tests/test_zksystem.py
 ```bash
 pytest -k TestZKSystem -s tests/test_zk_system.py
 ```
+
+## License
+
+MIT License. See the `LICENSE` file.
+
+## Contributing
+
+We welcome contributions! Please:
+
+* Fork the repository
+* Create a new branch for your feature or fix
+* Add tests
+* Ensure `pytest` passes
+* Open a pull request
+
+---
+
+Crafted with ❤️ to bring zero-knowledge privacy to Django.
+
+
   
