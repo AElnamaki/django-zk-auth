@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.log
+.env
+*.egg-info/
+dist/
+build/
+.poseidon_cache/
